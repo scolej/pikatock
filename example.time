@@ -1,0 +1,35 @@
+# Comment at the start.
+# Two lines at a time!
+
+# Another comment to cause trouble
+2016-08-12
+# Comment on its own line
+0700-0715 getting ready : dressing
+    -0730               : breakfast
+    -0745               : coffee
+    -0800               : packing
+    -0900 transit : out the door : reaching for the handle
+    -0901                        : turning the knob
+    -0902                        : pushing the door
+    -0903                        : waiting for it to swing open
+    -0904         : on the bike : turning on the likes # Comment at the end of a line
+    -0905                       : getting on the bike
+    -0930                       : pedalling like a mad dog
+1200-1221 eating the delicious food : chewing
+    -1222                           : uncat
+    -1223                           : chewing
+    -1224                           : uncat
+    
+# Comment in the middle
+
+2016-08-13
+1200-1230 sleeping in : oh man oh man
+    -1300             : why can't we do this every day?
+    -1400 waking up
+    -1500 eating all the things
+
+# Comment at the end
+# And following this will be a few extra new lines to cause more trouble.
+
+
+
