@@ -3,7 +3,7 @@
 
 # Another comment to cause trouble
 2016-08-12
-# Comment on its own line
+0630-0645 sleeping
 0700-0715 getting ready : dressing
     -0730               : breakfast
     -0745               : coffee
@@ -15,11 +15,12 @@
     -0904         : on the bike : turning on the likes # Comment at the end of a line
     -0905                       : getting on the bike
     -0930                       : pedalling like a mad dog
+    -9045         : in the door
 1200-1221 eating the delicious food : chewing
-    -1222                           : uncat
+    -1222                           : uncat  
     -1223                           : chewing
     -1224                           : uncat
-    
+
 # Comment in the middle
 
 2016-08-13
@@ -30,6 +31,3 @@
 
 # Comment at the end
 # And following this will be a few extra new lines to cause more trouble.
-
-
-

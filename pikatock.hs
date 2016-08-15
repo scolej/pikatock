@@ -4,73 +4,144 @@ import Data.Time.Calendar
 import Data.Time.LocalTime
 import Debug.Trace
 import Data.Char
+import Data.Either
 
-data Chunk = WordsChunk String
-           | SepChunk Int
-           deriving Show
-    
-data SourceLine = Date Day          -- ^ Line containing a date.
-                | Entry             -- ^ Line containing a log entry.
-                  (Maybe TimeOfDay) -- ^ The start time.
-                  TimeOfDay         -- ^ The end time component.
-                  [Chunk]           -- ^ List of chunks that appear on this line.
-                  deriving Show
+data Entry = Entry Day TimeOfDay TimeOfDay [String]
+             deriving Show
 
+data ParseState = PSNothing
+                | PSDay Day
+                | PSPrevInfo Day TimeOfDay [(SourcePos, String)]
+
+-- | Inefficient whitespace trim, ripped straight from Stack Overflow :O
 trim :: String -> String
-trim = let f = reverse . dropWhile isSpace in f . f
-                           
-skipTillEOL = skipMany (noneOf "\n\r")
-                           
-comment :: Parsec String u (Maybe a)
-comment = do
-  spaces
-  _ <- char '#'
-  skipTillEOL
-  return Nothing
+trim = let f = reverse . dropWhile isSpace
+       in f . f
 
-date :: Parsec String u (Maybe SourceLine)
+skipTillEOL :: Parsec String u ()
+skipTillEOL = skipMany $ noneOf "\n\r"
+
+comment :: Parsec String u ()
+comment = char '#' >> skipTillEOL >> return ()
+
+date :: Parsec String ParseState ()
 date = do
   y <- count 4 digit
   _ <- char '-'
   m <- count 2 digit
   _ <- char '-'
   d <- count 2 digit
-  return $ Just $ Date $ fromGregorian (read y) (read m) (read d)
+  let day = fromGregorian (read y) (read m) (read d)
+  putState $ PSDay day
 
-time :: Parsec String u (Maybe TimeOfDay)
-time = (count 4 space >> return Nothing)
-       <|>
-       (do h <- count 2 digit
-           m <- count 2 digit
-           return $ Just $ TimeOfDay (read h) (read m) 0)
+time :: Parsec String s TimeOfDay
+time = do
+  h <- count 2 digit
+  m <- count 2 digit
+  return $ TimeOfDay (read h) (read m) 0
 
-chunk :: Parsec String u Chunk
-chunk = (char ':' >> getPosition >>= (return . SepChunk . sourceColumn))
-        <|>
-        (many1 (noneOf ":\n\r#") >>= (return . WordsChunk . trim))
-        
-entry :: Parsec String u (Maybe SourceLine)
+-- | Either read a time string as in the `time` function, or if we get
+-- a bunch of blank spaces, infer the start time from the end time of
+-- the previous entry.
+timeStart :: Parsec String ParseState TimeOfDay
+timeStart = let startExtractor (PSPrevInfo _ s _) = return s
+                startExtractor _ = fail "Couldn't infer start time."
+            in (count 4 (char ' ') >> getState >>= startExtractor)
+            <|>
+            time
+
+-- | Read a bunch of characters that can make up a category between
+-- colons.
+chunkchars :: Parsec String u String
+chunkchars = many1 (noneOf ":\n\r#") 
+
+-- | Read a subcategory chunk. This will start with a colon and
+-- continues to the next colon / newline / comment.
+chunk :: Parsec String u (SourcePos, String)
+chunk = do
+  pos <- getPosition
+  _ <- char ':'
+  s <- chunkchars
+  return (pos, trim s)
+
+-- | Read the first chunk of a line. This won't start with a colon and
+-- may or may not be present. If it is not present we are going to
+-- have to infer what should go here from the previous line.
+firstChunk :: Parsec String u (Maybe (SourcePos, String))
+firstChunk = do
+  pos <- getPosition
+  cs <- optionMaybe chunkchars
+  return ((,) pos . trim <$> cs)
+
+-- | Try to read the chunks on a line and do any necessary inferring.
+chunks :: Parsec String ParseState [(SourcePos, String)]
+chunks = do
+  state <- getState
+  c1 <- firstChunk
+  cs <- many chunk
+  case c1 of Nothing -> case inferChunks state cs of Left s -> fail s
+                                                     Right v -> return v
+             Just c -> return (c:cs)
+  
+inferChunks :: ParseState
+            -> [(SourcePos, String)] -- ^ List of entries which are missing their parent categories and need to have them inferred.
+            -> Either String [(SourcePos, String)] -- ^ Either some error or the inferred parent cats.
+inferChunks state es =
+    let
+        -- The column of the first category on this line.
+        p1 = (sourceColumn . fst) (head es)
+        -- Infer the parent categories using the categories from the
+        -- previous line (pes).
+        infer pes = let inferred = takeWhile (\(pos, _) -> sourceColumn pos /= p1) pes
+                    in inferred ++ es
+    in
+      case state of PSPrevInfo _ _ pes ->
+                        -- Make sure there is an entry in the previous
+                        -- line which starts in the same column as the
+                        -- first entry of this line.
+                        if any (\(pos, _) -> sourceColumn pos == p1) pes
+                        then Right $ infer pes
+                        else Left "Could not infer parent categories, check alignment."
+                    _ -> Left "Could not infer parent categories, entry out of context?"
+
+-- | Read an entry on a single line.
+entry :: Parsec String ParseState Entry
 entry = do
-  start <- time
+  state <- getState
+  day <- case state of PSDay d -> return d
+                       PSPrevInfo d _ _ -> return d
+                       PSNothing -> fail "Couldn't infer date."
+  start <- timeStart
   _ <- char '-'
-  Just end <- time
-  skipMany1 space
-  chunks <- many1 chunk
-  return $ Just $ Entry start end chunks 
-       
+  end <- time
+  skipMany1 $ char ' '
+  cs <- chunks
+  optional comment
+  let e = Entry day start end (map snd cs)
+  putState $ PSPrevInfo day start cs
+  return e
 
-line :: Parsec String u (Maybe SourceLine)
-line = try date <|> try entry <|> try comment
-           
-parseSource :: Parsec String u [SourceLine]
-parseSource = do
-  ls <- line `sepEndBy` endOfLine
-  return $ catMaybes ls
+-- | Read a date and then a set of entries for that date.
+entryGroup :: Parsec String ParseState [Entry]
+entryGroup = do
+  cruft
+  date
+  _ <-endOfLine
+  es <- entry `endBy1` endOfLine
+  cruft
+  return es
 
-               
+parseSource :: Parsec String ParseState [Entry]
+parseSource = concat <$> many1 entryGroup
+
+-- | Read off blank lines and comments.
+cruft :: Parsec String u ()
+cruft = skipMany (skipMany1 endOfLine <|> comment)
+
 main :: IO ()
 main = do
   contents <- readFile "example.time"
-  let Right x = parse parseSource "" contents
-  mapM_ (putStrLn . show) x 
+  let x = runParser parseSource PSNothing "" contents
+  case x of Right x -> mapM_ print x
+            Left e -> print e
   return ()
