@@ -1,3 +1,4 @@
+import Data.Foldable
 import Data.Monoid
 import Data.Time.Clock
 import Data.Time.LocalTime
@@ -16,7 +17,9 @@ perforate f xs = if any f xs
 
 
 -- | Some value tagged with a string.
-data TagVal a = TagVal String a
+data TagVal a = TagVal { ttag :: String
+                       , tval :: a
+                       }
   deriving Show
 
 type TagTree a = Tree (TagVal a)
@@ -58,11 +61,16 @@ pf x = showFFloat (Just 2) x ""
 prettyShow :: TagVal (Sum Float) -> String
 prettyShow (TagVal t (Sum v)) = t ++ " " ++ pf v
 
+sumBelow :: Monoid m => TagTree m -> TagTree m
+sumBelow tree@(Node tagval cs) =
+  let v' = fold (fmap (\tv -> tval tv) tree)
+  in Node tagval {tval = v'} (map sumBelow cs)
+
 main :: IO ()
 main = do
   args <- getArgs
   if length args /= 1
   then putStrLn usage
   else do es <- pikatokParseFile (args !! 0)
-          let tree = prettyShow <$> mappendTree calcDuration es
+          let tree = prettyShow <$> sumBelow (mappendTree calcDuration es)
           (putStrLn . drawTree) tree
