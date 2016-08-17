@@ -1,6 +1,6 @@
 module Parser
 ( pikatokParseFile
-, Entry
+, Entry (..)
 ) where
 
 import Data.Char
