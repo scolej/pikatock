@@ -40,7 +40,9 @@ time :: Parsec String s TimeOfDay
 time = do
   h <- count 2 digit
   m <- count 2 digit
-  return $ TimeOfDay (read h) (read m) 0
+  let tod = makeTimeOfDayValid (read h) (read m) 0
+  case tod of Nothing -> fail "What sort of time do you call this?"
+              Just t -> return t
 
 -- | Either read a time string as in the `time` function, or if we get
 -- a bunch of blank spaces, infer the start time from the end time of

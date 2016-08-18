@@ -1,6 +1,7 @@
 import Data.Foldable
 import Data.List
 import Data.Monoid
+import Data.Ord
 import Data.Time.Clock
 import Data.Time.LocalTime
 import Data.Tree
@@ -64,6 +65,11 @@ sumBelow tree@(Node tagval cs) =
   let v' = fold (fmap tval tree)
   in Node tagval {tval = v'} (map sumBelow cs)
 
+sortTree :: Ord o => TagTree o -> TagTree o
+sortTree (Node tv cs) = Node tv ((sortBy . comparing . fmap Down) f cs')
+  where f (Node (TagVal _ v) _) = v
+        cs' = map sortTree cs
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -76,5 +82,5 @@ main = do
           let es' = if "--today" `elem` flags
                     then filter (\(Entry d _ _ _) -> d == today) es
                     else es
-          let tree = prettyShow <$> sumBelow (mappendTree calcDuration es')
+          let tree = prettyShow <$> (sortTree . sumBelow) (mappendTree calcDuration es')
           (putStrLn . drawTree) tree
