@@ -120,7 +120,7 @@ entry = do
   cs <- chunks
   optional comment
   let e = Entry day start end (map snd cs)
-  putState $ PSPrevInfo day start cs
+  putState $ PSPrevInfo day end cs
   return e
 
 -- | Read a date and then a set of entries for that date.
