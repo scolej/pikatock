@@ -55,10 +55,10 @@ calcDuration (Entry _ start end es) =
   in (es, d)
 
 pf :: Float -> String
-pf x = showFFloat (Just 2) x ""
+pf x = showFFloat (Just 1) x ""
 
 prettyShow :: TagVal (Sum Float) -> String
-prettyShow (TagVal t (Sum v)) = t ++ " " ++ pf v
+prettyShow (TagVal t (Sum v)) = pf v ++ " " ++ t
 
 sumBelow :: Monoid m => TagTree m -> TagTree m
 sumBelow tree@(Node tagval cs) =
@@ -69,6 +69,11 @@ sortTree :: Ord o => TagTree o -> TagTree o
 sortTree (Node tv cs) = Node tv ((sortBy . comparing . fmap Down) f cs')
   where f (Node (TagVal _ v) _) = v
         cs' = map sortTree cs
+
+simplePrintTree :: (a -> String) -> Tree a -> String
+simplePrintTree f tree = go 0 tree
+  where go i (Node x cs) =
+          replicate i ' ' ++ " " ++ f x ++ "\n" ++ concatMap (go (i + 4)) cs
 
 main :: IO ()
 main = do
@@ -82,5 +87,5 @@ main = do
           let es' = if "--today" `elem` flags
                     then filter (\(Entry d _ _ _) -> d == today) es
                     else es
-          let tree = prettyShow <$> (sortTree . sumBelow) (mappendTree calcDuration es')
-          (putStrLn . drawTree) tree
+          let tree = (sortTree . sumBelow) (mappendTree calcDuration es')
+          (putStrLn . simplePrintTree prettyShow) tree
