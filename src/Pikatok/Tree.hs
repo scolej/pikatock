@@ -1,13 +1,19 @@
+module Pikatok.Tree
+  ( TagTree
+  , TagVal (..)
+  , blankTree
+  , mappendTree
+  , simplePrintTree
+  , sortTree
+  , sumBelow
+  , tagTreeInsert
+  ) where
+
 import Data.Foldable
 import Data.List
 import Data.Monoid
 import Data.Ord
-import Data.Time.Clock
-import Data.Time.LocalTime
 import Data.Tree
-import Numeric
-import Parser
-import System.Environment
 
 -- | Split a list with a predicate into the elements before the first
 -- match, the first match, and the elements after the first match.
@@ -17,7 +23,6 @@ perforate f xs = if any f xs
                       in Just (as, b, bs)
                  else Nothing
 
-
 -- | Some value tagged with a string.
 data TagVal a = TagVal { ttag :: String
                        , tval :: a
@@ -25,8 +30,6 @@ data TagVal a = TagVal { ttag :: String
   deriving Show
 
 type TagTree a = Tree (TagVal a)
-
-type TimeTree = TagTree [Entry]
 
 blankTree :: Monoid m => TagTree m
 blankTree = Node (TagVal "" mempty) []
@@ -44,22 +47,6 @@ mappendTree :: Monoid m => (a -> ([String], m)) -> [a] -> TagTree m
 mappendTree f es = let es' = map f es
                    in foldl tagTreeInsert blankTree es'
 
-usage :: String
-usage = "Usage: pikatok [--today] <input-file>"
-
-calcDuration :: Entry -> ([String], Sum Float)
-calcDuration (Entry _ start end es) =
-  let s = timeOfDayToTime start
-      e = timeOfDayToTime end
-      d = Sum ((fromIntegral . diffTimeToPicoseconds $ e - s) / 1e12 / 60 / 60)
-  in (es, d)
-
-pf :: Float -> String
-pf x = showFFloat (Just 1) x ""
-
-prettyShow :: TagVal (Sum Float) -> String
-prettyShow (TagVal t (Sum v)) = pf v ++ " " ++ t
-
 sumBelow :: Monoid m => TagTree m -> TagTree m
 sumBelow tree@(Node tagval cs) =
   let v' = fold (fmap tval tree)
@@ -71,21 +58,6 @@ sortTree (Node tv cs) = Node tv ((sortBy . comparing . fmap Down) f cs')
         cs' = map sortTree cs
 
 simplePrintTree :: (a -> String) -> Tree a -> String
-simplePrintTree f tree = go 0 tree
+simplePrintTree f = go 0
   where go i (Node x cs) =
           replicate i ' ' ++ " " ++ f x ++ "\n" ++ concatMap (go (i + 4)) cs
-
-main :: IO ()
-main = do
-  args <- getArgs
-  now <- getZonedTime
-  let today = (localDay . zonedTimeToLocalTime) now
-  let (flags, other) = partition (\a -> ((== "--") . take 2) a) args
-  if length other /= 1
-  then putStrLn usage
-  else do es <- pikatokParseFile (other !! 0)
-          let es' = if "--today" `elem` flags
-                    then filter (\(Entry d _ _ _) -> d == today) es
-                    else es
-          let tree = (sortTree . sumBelow) (mappendTree calcDuration es')
-          (putStrLn . simplePrintTree prettyShow) tree

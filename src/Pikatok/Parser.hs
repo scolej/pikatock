@@ -1,16 +1,17 @@
-module Parser
-( pikatokParseFile
-, Entry (..)
-) where
+module Pikatok.Parser
+  ( pikatokParseFile
+  ) where
 
 import Data.Char
 import Data.Time.Calendar
 import Data.Time.LocalTime
+import Pikatok.Entry
 import Text.Parsec
 
-data Entry = Entry Day TimeOfDay TimeOfDay [String]
-             deriving Show
-
+-- | Type for storing the current state while we're parsing our
+-- file. We are storing the current context in which we're reading. We
+-- either have no context, we know what the day is, or we have an
+-- entire previous entry to infer things from.
 data ParseState = PSNothing
                 | PSDay Day
                 | PSPrevInfo Day TimeOfDay [(SourcePos, String)]
