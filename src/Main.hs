@@ -1,3 +1,4 @@
+import Data.Ord
 import Data.List
 import Data.Monoid
 import Data.Time.Clock
@@ -36,5 +37,5 @@ main = do
           let es' = if "--today" `elem` flags
                     then filter (\(Entry d _ _ _) -> d == today) es
                     else es
-          let tree = (sortTree . sumBelow) (mappendTree calcDuration es')
-          (putStrLn . simplePrintTree prettyShow) tree
+          let tree = (sortTree (comparing (Down . tval)) . sumBelow) (mappendTree calcDuration es')
+          (putStrLn . simpleShowTree prettyShow) tree

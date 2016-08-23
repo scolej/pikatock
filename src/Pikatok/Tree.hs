@@ -2,9 +2,11 @@ module Pikatok.Tree
   ( TagTree
   , TagVal (..)
   , blankTree
+  , grabTreeM
   , mappendTree
-  , simplePrintTree
+  , simpleShowTree
   , sortTree
+  , sortOrdTree
   , sumBelow
   , tagTreeInsert
   ) where
@@ -12,7 +14,6 @@ module Pikatok.Tree
 import Data.Foldable
 import Data.List
 import Data.Monoid
-import Data.Ord
 import Data.Tree
 
 -- | Split a list with a predicate into the elements before the first
@@ -52,12 +53,25 @@ sumBelow tree@(Node tagval cs) =
   let v' = fold (fmap tval tree)
   in Node tagval {tval = v'} (map sumBelow cs)
 
-sortTree :: Ord o => TagTree o -> TagTree o
-sortTree (Node tv cs) = Node tv ((sortBy . comparing . fmap Down) f cs')
-  where f (Node (TagVal _ v) _) = v
-        cs' = map sortTree cs
+sortTree :: (a -> a -> Ordering) -> Tree a -> Tree a
+sortTree f (Node v cs) = Node v cs'
+  where cs' = map (sortTree f) (sortBy (\a b -> f (g a) (g b)) cs)
+        g (Node t _) = t -- Value extractor.
 
-simplePrintTree :: (a -> String) -> Tree a -> String
-simplePrintTree f = go 0
+-- | Make sure all of a trees children are sorted in descending order.
+sortOrdTree :: Ord o => Tree o -> Tree o
+sortOrdTree = sortTree compare
+
+simpleShowTree :: (a -> String) -> Tree a -> String
+simpleShowTree f = go 0
   where go i (Node x cs) =
           replicate i ' ' ++ " " ++ f x ++ "\n" ++ concatMap (go (i + 4)) cs
+
+-- | Grab out a subtree from a tree using a sequence of tags (if it exists).
+grabTreeM :: Monoid a => TagTree a -> [String] -> Maybe (TagTree a)
+grabTreeM tree [] = Just tree
+grabTreeM (Node _ cs) ts =
+  let tag = head ts
+      mt = find (\(Node (TagVal t _) _) -> t == tag) cs -- Child tree matching the head tag if it exists.
+  in case mt of Nothing -> Nothing
+                Just t -> grabTreeM t (tail ts)
