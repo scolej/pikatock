@@ -53,3 +53,11 @@ Usage
 Use me with an input file like this:
 
 `pikatok input.time`
+
+To do
+-----
+
+* A new flag `--exclude` to exclude certain tree elements.
+* A new flag `--depth` to only print to a certain depth.
+* A new flag `--daily` to print a set of days individually.
+* Support for passing in multiple time files and also directories to scan recursively.
