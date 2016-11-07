@@ -16,7 +16,7 @@ Keep a plain text log file like so:
 1700-1730 rest of the day : maybe do a little bit of work
 ```
 
-And then get nice a nice summed up tree of times as output:
+And then get a nice summed up tree of times as output:
 
 ```
 6.5
