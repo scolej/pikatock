@@ -1,5 +1,5 @@
-PIKATOK
-=======
+PIKATOCK
+========
 
 _Tiny time tracking_
 
@@ -52,7 +52,7 @@ Usage
 
 Use me with an input file like this:
 
-`pikatok input.time`
+`pikatock input.time`
 
 To do
 -----
