@@ -3,6 +3,8 @@ PIKATOCK
 
 _Tiny time tracking_
 
+![Master branch build status](https://travis-ci.org/scolej/pikatock.svg?branch=master)
+
 What is this?
 -------------
 
