@@ -1,10 +1,10 @@
-module Pikatok.Util.Test (tests) where
+module Pikatock.Util.Test (tests) where
 
 import Data.Time.Calendar
 import Data.Time.LocalTime
 import Debug.Trace
-import Pikatok.Entry
-import Pikatok.Util
+import Pikatock.Entry
+import Pikatock.Util
 import Test.HUnit
 
 tests :: Test

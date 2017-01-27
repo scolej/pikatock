@@ -1,4 +1,4 @@
-module Pikatok.Entry
+module Pikatock.Entry
   ( Entry(..)
   ) where
 

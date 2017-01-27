@@ -1,11 +1,11 @@
-module Pikatok.Parser
-  ( pikatokParseFile
+module Pikatock.Parser
+  ( pikatockParseFile
   ) where
 
 import Data.Char
 import Data.Time.Calendar
 import Data.Time.LocalTime
-import Pikatok.Entry
+import Pikatock.Entry
 import Text.Parsec
 
 -- | Type for storing the current state while we're parsing our
@@ -152,13 +152,13 @@ entryGroup = do
 cruft :: Parsec String u ()
 cruft = skipMany (skipMany1 endOfLine <|> comment)
 
-pikatokParse :: Parsec String ParseState [Entry]
-pikatokParse = concat <$> many1 entryGroup
+pikatockParse :: Parsec String ParseState [Entry]
+pikatockParse = concat <$> many1 entryGroup
 
-pikatokParseFile :: String -> IO [Entry]
-pikatokParseFile f = do
+pikatockParseFile :: String -> IO [Entry]
+pikatockParseFile f = do
   contents <- readFile f
-  let result = runParser pikatokParse PSNothing f contents
+  let result = runParser pikatockParse PSNothing f contents
   case result of
     Left e -> fail (show e)
     Right es -> return es

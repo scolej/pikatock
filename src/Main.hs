@@ -3,14 +3,14 @@ import Data.Monoid
 import Data.Ord
 import Data.Time.Calendar
 import Data.Time.LocalTime
-import Pikatok.Entry
-import Pikatok.Parser
-import Pikatok.Tree
-import Pikatok.Util
+import Pikatock.Entry
+import Pikatock.Parser
+import Pikatock.Tree
+import Pikatock.Util
 import System.Environment
 
 usage :: String
-usage = "Usage: pikatok [--today | --work-week] <input-file...>"
+usage = "Usage: pikatock [--today | --work-week] <input-file...>"
 
 main :: IO ()
 main = do
@@ -21,7 +21,7 @@ main = do
   if length other < 1
     then putStrLn usage
     else do
-      es <- concat <$> mapM pikatokParseFile other
+      es <- concat <$> mapM pikatockParseFile other
       let es'
             | "--today" `elem` flags =
               filter (\(Entry d _ _ _) -> d == today) es

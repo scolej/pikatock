@@ -1,4 +1,4 @@
-module Pikatok.Util where
+module Pikatock.Util where
 
 import Data.Monoid
 import Data.Time.Calendar
@@ -6,8 +6,8 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Time.LocalTime
 import Numeric
-import Pikatok.Entry
-import Pikatok.Tree
+import Pikatock.Entry
+import Pikatock.Tree
 
 -- | Map a user's entry to the list of tags which categorize it and a
 -- value which can be mappended with all the other user entries. This

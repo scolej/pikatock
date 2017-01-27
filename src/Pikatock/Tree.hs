@@ -1,4 +1,4 @@
-module Pikatok.Tree
+module Pikatock.Tree
   ( TagTree
   , TagVal(..)
   , blankTree
