@@ -2,10 +2,7 @@ import Data.List
 import Data.Monoid
 import Data.Ord
 import Data.Time.Calendar
-import Data.Time.Clock
-import Data.Time.Format
 import Data.Time.LocalTime
-import Numeric
 import Pikatok.Entry
 import Pikatok.Parser
 import Pikatok.Tree
@@ -22,10 +19,15 @@ main = do
   let today = (localDay . zonedTimeToLocalTime) now
   let (flags, other) = partition ((== "--") . take 2) args
   if length other < 1
-  then putStrLn usage
-  else do es <- concat <$> mapM pikatokParseFile other
-          let es' | "--today" `elem` flags = filter (\(Entry d _ _ _) -> d == today) es
-                  | "--work-week" `elem` flags = filter (entryInWorkWeek today) es
-                  | otherwise = es
-          let tree = (sortTree (comparing (Down . tval)) . sumBelow) (mappendTree calcDuration es')
-          (putStrLn . simpleShowTree prettyShow) tree
+    then putStrLn usage
+    else do
+      es <- concat <$> mapM pikatokParseFile other
+      let es'
+            | "--today" `elem` flags =
+              filter (\(Entry d _ _ _) -> d == today) es
+            | "--work-week" `elem` flags = filter (entryInWorkWeek today) es
+            | otherwise = es
+      let tree =
+            (sortTree (comparing (Down . tval)) . sumBelow)
+              (mappendTree calcDuration es')
+      (putStrLn . simpleShowTree prettyShow) tree

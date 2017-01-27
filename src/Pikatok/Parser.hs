@@ -12,14 +12,18 @@ import Text.Parsec
 -- file. We are storing the current context in which we're reading. We
 -- either have no context, we know what the day is, or we have an
 -- entire previous entry to infer things from.
-data ParseState = PSNothing
-                | PSDay Day
-                | PSPrevInfo Day TimeOfDay [(SourcePos, String)]
+data ParseState
+  = PSNothing
+  | PSDay Day
+  | PSPrevInfo Day
+               TimeOfDay
+               [(SourcePos, String)]
 
 -- | Inefficient whitespace trim, ripped straight from Stack Overflow :O
 trim :: String -> String
-trim = let f = reverse . dropWhile isSpace
-       in f . f
+trim =
+  let f = reverse . dropWhile isSpace
+  in f . f
 
 skipTillEOL :: Parsec String u ()
 skipTillEOL = skipMany $ noneOf "\n\r"
@@ -42,18 +46,18 @@ time = do
   h <- count 2 digit
   m <- count 2 digit
   let tod = makeTimeOfDayValid (read h) (read m) 0
-  case tod of Nothing -> fail "What sort of time do you call this?"
-              Just t -> return t
+  case tod of
+    Nothing -> fail "What sort of time do you call this?"
+    Just t -> return t
 
 -- | Either read a time string as in the `time` function, or if we get
 -- a bunch of blank spaces, infer the start time from the end time of
 -- the previous entry.
 timeStart :: Parsec String ParseState TimeOfDay
-timeStart = let startExtractor (PSPrevInfo _ s _) = return s
-                startExtractor _ = fail "Couldn't infer start time."
-            in (count 4 (char ' ') >> getState >>= startExtractor)
-            <|>
-            time
+timeStart =
+  let startExtractor (PSPrevInfo _ s _) = return s
+      startExtractor _ = fail "Couldn't infer start time."
+  in (count 4 (char ' ') >> getState >>= startExtractor) <|> time
 
 -- | Read a bunch of characters that can make up a category between
 -- colons.
@@ -84,38 +88,46 @@ chunks = do
   state <- getState
   c1 <- firstChunk
   cs <- many chunk
-  case c1 of Nothing -> case inferChunks state cs of Left s -> fail s
-                                                     Right v -> return v
-             Just c -> return (c:cs)
+  case c1 of
+    Nothing ->
+      case inferChunks state cs of
+        Left s -> fail s
+        Right v -> return v
+    Just c -> return (c : cs)
 
-inferChunks :: ParseState
-            -> [(SourcePos, String)] -- ^ List of entries which are missing their parent categories and need to have them inferred.
-            -> Either String [(SourcePos, String)] -- ^ Either some error or the inferred parent cats.
-inferChunks state es =
-    let
+inferChunks
+  :: ParseState
+  -> [(SourcePos, String)] -- ^ List of entries which are missing their parent categories and need to have them inferred.
+  -> Either String [(SourcePos, String)] -- ^ Either some error or the inferred parent cats.
+inferChunks state es
         -- The column of the first category on this line.
-        p1 = (sourceColumn . fst) (head es)
+ =
+  let p1 = (sourceColumn . fst) (head es)
         -- Infer the parent categories using the categories from the
         -- previous line (pes).
-        infer pes = let inferred = takeWhile (\(pos, _) -> sourceColumn pos /= p1) pes
-                    in inferred ++ es
-    in
-      case state of PSPrevInfo _ _ pes ->
+      infer pes =
+        let inferred = takeWhile (\(pos, _) -> sourceColumn pos /= p1) pes
+        in inferred ++ es
+  in case state of
+       PSPrevInfo _ _ pes
                         -- Make sure there is an entry in the previous
                         -- line which starts in the same column as the
                         -- first entry of this line.
-                        if any (\(pos, _) -> sourceColumn pos == p1) pes
-                        then Right $ infer pes
-                        else Left "Could not infer parent categories, check alignment."
-                    _ -> Left "Could not infer parent categories, entry out of context?"
+        ->
+         if any (\(pos, _) -> sourceColumn pos == p1) pes
+           then Right $ infer pes
+           else Left "Could not infer parent categories, check alignment."
+       _ -> Left "Could not infer parent categories, entry out of context?"
 
 -- | Read an entry on a single line.
 entry :: Parsec String ParseState Entry
 entry = do
   state <- getState
-  day <- case state of PSDay d -> return d
-                       PSPrevInfo d _ _ -> return d
-                       PSNothing -> fail "Couldn't infer date."
+  day <-
+    case state of
+      PSDay d -> return d
+      PSPrevInfo d _ _ -> return d
+      PSNothing -> fail "Couldn't infer date."
   start <- timeStart
   _ <- char '-'
   end <- time
@@ -131,7 +143,7 @@ entryGroup :: Parsec String ParseState [Entry]
 entryGroup = do
   cruft
   date
-  _ <-endOfLine
+  _ <- endOfLine
   es <- entry `endBy1` endOfLine
   cruft
   return es
@@ -147,5 +159,6 @@ pikatokParseFile :: String -> IO [Entry]
 pikatokParseFile f = do
   contents <- readFile f
   let result = runParser pikatokParse PSNothing f contents
-  case result of Left e -> fail (show e)
-                 Right es -> return es
+  case result of
+    Left e -> fail (show e)
+    Right es -> return es
