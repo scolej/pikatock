@@ -9,7 +9,9 @@ import Numeric
 import Pikatok.Entry
 import Pikatok.Tree
 
--- | TODO What does this even do :S
+-- | Map a user's entry to the list of tags which categorize it and a
+-- value which can be mappended with all the other user entries. This
+-- is used when collecting the entries into a tree.
 calcDuration :: Entry -> ([String], Sum Float)
 calcDuration (Entry _ start end es) =
   let s = timeOfDayToTime start

@@ -51,9 +51,16 @@ tagTreeInsert (Node tv children) (t:ts, a) =
 tagTreeInsert (Node (TagVal t v) children) ([], a) =
   Node (TagVal t (v <> a)) children
 
+-- | Build a tag tree from a list of things which can be tagged and
+-- mappended.
 mappendTree
   :: Monoid m
-  => (a -> ([String], m)) -> [a] -> TagTree m
+  => (a -> ([String], m))
+  -- ^ A function which maps a thing to a list of tags and a Monoid
+  -- value.
+  -> [a]
+  -- ^ List of things to collect into the TagTree.
+  -> TagTree m
 mappendTree f es =
   let es' = map f es
   in foldl tagTreeInsert blankTree es'
