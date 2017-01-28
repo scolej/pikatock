@@ -1,5 +1,6 @@
 module Pikatock.Parser
   ( pikatockParseFile
+  , readDate
   ) where
 
 import Data.Char
@@ -31,7 +32,7 @@ skipTillEOL = skipMany $ noneOf "\n\r"
 comment :: Parsec String u ()
 comment = char '#' >> skipTillEOL >> return ()
 
-date :: Parsec String ParseState ()
+date :: Parsec String ParseState Day
 date = do
   y <- count 4 digit
   _ <- char '-'
@@ -40,6 +41,14 @@ date = do
   d <- count 2 digit
   let day = fromGregorian (read y) (read m) (read d)
   putState $ PSDay day
+  return day
+
+-- | Handy parser of dates that can be useful on its own.
+readDate :: String -> Either String Day
+readDate s =
+  case runParser date PSNothing "" s of
+    Left e -> Left (show e)
+    Right v -> Right v
 
 time :: Parsec String s TimeOfDay
 time = do
@@ -140,13 +149,11 @@ entry = do
 
 -- | Read a date and then a set of entries for that date.
 entryGroup :: Parsec String ParseState [Entry]
-entryGroup = do
-  cruft
-  date
-  _ <- endOfLine
-  es <- entry `endBy1` endOfLine
-  cruft
-  return es
+entryGroup =
+  cruft >> date >> endOfLine >> do
+    es <- entry `endBy1` endOfLine
+    cruft
+    return es
 
 -- | Read off blank lines and comments.
 cruft :: Parsec String u ()
